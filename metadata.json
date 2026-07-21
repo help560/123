@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Dashboard S8 Pilates",
+  "description": "Dashboard interactivo Bento Grid de alta fidelidad para análisis y gestión de reservas de Studio 8 Pilates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
