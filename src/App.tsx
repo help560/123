@@ -25,6 +25,26 @@ import { BookingDetailModal } from './components/BookingDetailModal';
 
 import { CheckCircle2, AlertCircle, ShieldCheck, CalendarX, RotateCcw } from 'lucide-react';
 
+// Subtle Skeleton Loader for File Processing Transitions (prevents CLS)
+const DashboardSkeleton: React.FC = () => (
+  <div className="space-y-6 animate-pulse py-2" aria-label="Cargando y procesando reservas de Studio 8..." role="status">
+    <div className="h-16 bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="md:col-span-2 h-[260px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+      <div className="h-[260px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+      <div className="h-[260px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+      <div className="h-[260px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+      <div className="h-[160px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+      <div className="md:col-span-3 h-[160px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+    </div>
+
+    <div className="h-16 bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+    <div className="h-[380px] bg-white dark:bg-slate-800/60 rounded-2xl border border-[#E8E4DD] dark:border-slate-700" />
+    <span className="sr-only">Procesando hoja de cálculo...</span>
+  </div>
+);
+
 export default function App() {
   // Estado Cero: Starts on Dropzone screen (isDropzoneVisible = true)
   const [bookings, setBookings] = useState<PilatesBooking[]>([]);
@@ -173,7 +193,7 @@ export default function App() {
   const metrics = useMemo(() => calculateMetrics(filteredBookings), [filteredBookings]);
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#1A1A1A] font-sans-ui flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans-ui flex flex-col transition-colors">
       
       {/* Toast Notification Banner */}
       {notification && (
@@ -191,7 +211,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Header */}
+      {/* 1. Global Header Section */}
       <Header
         fileName={fileName}
         totalCount={bookings.length}
@@ -210,104 +230,116 @@ export default function App() {
       {/* Main Content View Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Dynamic Dropzone Mode vs Dashboard Bento Grid */}
-        {isDropzoneVisible || bookings.length === 0 ? (
+        {/* Subtle Skeleton Loader when reading new file */}
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : isDropzoneVisible || bookings.length === 0 ? (
+          /* Dynamic Dropzone Mode */
           <Dropzone
             onFileUpload={handleFileUpload}
             onLoadSampleData={handleLoadSampleData}
             isLoading={isLoading}
           />
         ) : (
-          <div>
-            {/* Dynamic Time Range Filter Control (Positioned in Bento Grid Sub-Header) */}
-            <TimeRangeSelector
-              timeRange={timeRange}
-              selectedMonth={selectedMonth}
-              availableMonths={availableMonths}
-              totalBookingsCount={bookings.length}
-              filteredBookingsCount={timeFilteredBookings.length}
-              dateRangeLabel={dateRangeLabel}
-              onRangeChange={(newRange) => setTimeRange(newRange)}
-              onMonthChange={(newMonth) => setSelectedMonth(newMonth)}
-            />
+          <div className="space-y-6">
+            
+            {/* 2. Section: Filtros y Métricas Clave */}
+            <section aria-label="Filtros y Métricas Clave" className="space-y-6">
+              {/* Dynamic Time Range Filter Control */}
+              <TimeRangeSelector
+                timeRange={timeRange}
+                selectedMonth={selectedMonth}
+                availableMonths={availableMonths}
+                totalBookingsCount={bookings.length}
+                filteredBookingsCount={timeFilteredBookings.length}
+                dateRangeLabel={dateRangeLabel}
+                onRangeChange={(newRange) => setTimeRange(newRange)}
+                onMonthChange={(newMonth) => setSelectedMonth(newMonth)}
+              />
 
-            {/* Empty State for zero matches in selected time range */}
-            {timeFilteredBookings.length === 0 ? (
-              <div className="bg-white rounded-2xl p-10 border border-[#E8E4DD] shadow-xs text-center my-6 flex flex-col items-center justify-center min-h-[300px]">
-                <div className="w-14 h-14 rounded-full bg-[#F5F1E8] flex items-center justify-center text-[#8C7A6B] mb-4 border border-[#E8E4DD]">
-                  <CalendarX className="w-7 h-7" />
-                </div>
-                <h3 className="font-serif-luxury text-2xl font-bold text-[#1A1A1A] mb-1">
-                  Sin Reservas en este Período
-                </h3>
-                <p className="text-xs sm:text-sm text-[#7A6E5D] max-w-md mb-5 leading-relaxed">
-                  No se encontraron reservas registradas para <strong className="text-[#1A1A1A] font-semibold">{dateRangeLabel}</strong>. Puedes seleccionar otro mes o regresar a la vista completa de reservas.
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => setTimeRange('all')}
-                    type="button"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A1A] text-[#FDFBF7] text-xs font-semibold hover:bg-[#2B2823] transition-all cursor-pointer shadow-xs"
-                  >
-                    <RotateCcw className="w-4 h-4 text-[#C8BFA8]" />
-                    <span>Ver Todo el Histórico ({bookings.length} reservas)</span>
-                  </button>
-                  {availableMonths.length > 0 && (
+              {/* Empty State for zero matches in selected time range */}
+              {timeFilteredBookings.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-10 border border-[#E8E4DD] dark:border-slate-800 shadow-xs text-center my-6 flex flex-col items-center justify-center min-h-[300px]">
+                  <div className="w-14 h-14 rounded-full bg-[#F5F1E8] dark:bg-slate-800 flex items-center justify-center text-[#8C7A6B] dark:text-slate-400 mb-4 border border-[#E8E4DD] dark:border-slate-700">
+                    <CalendarX className="w-7 h-7" aria-hidden="true" />
+                  </div>
+                  <h3 className="font-serif-luxury text-2xl font-bold text-[#1A1A1A] dark:text-slate-100 mb-1">
+                    Sin Reservas en este Período
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#7A6E5D] dark:text-slate-400 max-w-md mb-5 leading-relaxed">
+                    No se encontraron reservas registradas para <strong className="text-[#1A1A1A] dark:text-slate-100 font-semibold">{dateRangeLabel}</strong>. Puedes seleccionar otro mes o regresar a la vista completa de reservas.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
                     <button
-                      onClick={() => {
-                        setTimeRange('month');
-                        setSelectedMonth(availableMonths[0]?.value || '');
-                      }}
+                      onClick={() => setTimeRange('all')}
                       type="button"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] text-[#4A453B] text-xs font-semibold hover:bg-[#EAE5D9] transition-all cursor-pointer border border-[#E8E4DD]"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A1A] text-[#FDFBF7] text-xs font-semibold hover:bg-[#2B2823] transition-all cursor-pointer shadow-xs focus:ring-2 focus:ring-[#1A1A1A]"
                     >
-                      <span>Ir al Mes Más Reciente ({availableMonths[0]?.label})</span>
+                      <RotateCcw className="w-4 h-4 text-[#C8BFA8]" aria-hidden="true" />
+                      <span>Ver Todo el Histórico ({bookings.length} reservas)</span>
                     </button>
-                  )}
+                    {availableMonths.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setTimeRange('month');
+                          setSelectedMonth(availableMonths[0]?.value || '');
+                        }}
+                        type="button"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] dark:bg-slate-800 text-[#4A453B] dark:text-slate-200 text-xs font-semibold hover:bg-[#EAE5D9] transition-all cursor-pointer border border-[#E8E4DD] dark:border-slate-700"
+                      >
+                        <span>Ir al Mes Más Reciente ({availableMonths[0]?.label})</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <>
-                {/* Bento Grid Analytics */}
-                <BentoGrid
-                  metrics={metrics}
-                  selectedCoach={filters.coach}
-                  selectedDisciplina={filters.disciplina}
-                  selectedRecordatorio={filters.recordatorio}
-                  onSelectCoach={(coach) => handleFilterChange({ coach })}
-                  onSelectDisciplina={(disciplina) => handleFilterChange({ disciplina })}
-                  onSelectRecordatorio={(recordatorio) => handleFilterChange({ recordatorio })}
-                />
+              ) : (
+                <>
+                  {/* Bento Grid Analytics */}
+                  <BentoGrid
+                    metrics={metrics}
+                    selectedCoach={filters.coach}
+                    selectedDisciplina={filters.disciplina}
+                    selectedRecordatorio={filters.recordatorio}
+                    onSelectCoach={(coach) => handleFilterChange({ coach })}
+                    onSelectDisciplina={(disciplina) => handleFilterChange({ disciplina })}
+                    onSelectRecordatorio={(recordatorio) => handleFilterChange({ recordatorio })}
+                  />
 
-                {/* Filter Bar */}
-                <FilterBar
-                  filters={filters}
-                  onFilterChange={handleFilterChange}
-                  onResetFilters={handleResetFilters}
-                  coaches={uniqueCoaches}
-                  disciplinas={uniqueDisciplinas}
-                  totalResults={filteredBookings.length}
-                />
+                  {/* Filter Bar */}
+                  <FilterBar
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    onResetFilters={handleResetFilters}
+                    coaches={uniqueCoaches}
+                    disciplinas={uniqueDisciplinas}
+                    totalResults={filteredBookings.length}
+                  />
+                </>
+              )}
+            </section>
 
-                {/* Data Table */}
+            {/* 3. Section: Análisis y Registros */}
+            {timeFilteredBookings.length > 0 && (
+              <section aria-label="Análisis y Registros">
                 <DataTable
                   bookings={filteredBookings}
                   onSelectBooking={(booking) => setSelectedBooking(booking)}
                 />
-              </>
+              </section>
             )}
+
           </div>
         )}
 
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#E8E4DD] bg-[#FDFBF7] py-6 px-4 text-center text-xs text-[#7A6E5D] mt-12">
+      <footer className="border-t border-[#E8E4DD] dark:border-slate-800 bg-[#FDFBF7] dark:bg-slate-900/80 py-6 px-4 text-center text-xs text-[#7A6E5D] dark:text-slate-400 mt-12 transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-serif-luxury text-sm font-semibold text-[#1A1A1A]">
+          <p className="font-serif-luxury text-sm font-semibold text-[#1A1A1A] dark:text-slate-200">
             Studio 8 Pilates — Premium Fitness Visualizer
           </p>
-          <p className="text-[11px] text-[#8C7A6B] flex items-center gap-1.5">
+          <p className="text-[11px] text-[#8C7A6B] dark:text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[#2E7D32]" />
             <span>Arquitectura Inmutable Read-Only • Fuente de Verdad Excel</span>
           </p>

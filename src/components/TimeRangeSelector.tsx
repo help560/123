@@ -56,8 +56,9 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
 
   return (
     <nav 
-      aria-label="Filtros temporales" 
-      className="w-full bg-[#FFFFFF] rounded-2xl p-3 sm:p-4 border border-[#E8E4DD] shadow-2xs mb-6 min-h-[64px] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3.5 transition-all"
+      role="toolbar"
+      aria-label="Filtros temporales del cuadro de mando" 
+      className="w-full bg-[#FFFFFF] dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-[#E8E4DD] dark:border-slate-800 shadow-2xs mb-6 min-h-[64px] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3.5 transition-all"
     >
       {/* 1D Flexbox Semantic Fieldset for Time Controls */}
       <fieldset className="w-full lg:w-auto flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -67,7 +68,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
         <div 
           role="group" 
           aria-label="Seleccionar rango temporal"
-          className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F5F1E8] rounded-xl border border-[#E8E4DD]"
+          className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F5F1E8] dark:bg-slate-800 rounded-xl border border-[#E8E4DD] dark:border-slate-700"
         >
           {OPTIONS.map((opt, idx) => {
             const isSelected = timeRange === opt.id;
@@ -85,13 +86,13 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                   }
                 }}
                 onKeyDown={(e) => handleKeyDown(e, idx)}
-                className={`inline-flex items-center gap-1.5 py-[clamp(0.375rem,0.6vw,0.45rem)] px-[clamp(0.625rem,0.9vw,0.85rem)] rounded-lg text-[clamp(0.75rem,0.82vw,0.875rem)] font-semibold transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A] focus-visible:ring-offset-1 ${
+                className={`inline-flex items-center gap-1.5 py-[clamp(0.375rem,0.6vw,0.45rem)] px-[clamp(0.625rem,0.9vw,0.85rem)] rounded-lg text-[clamp(0.75rem,0.82vw,0.875rem)] font-semibold transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A] dark:focus-visible:ring-slate-300 focus-visible:ring-offset-1 ${
                   isSelected
                     ? 'bg-[#1A1A1A] text-[#FDFBF7] shadow-xs'
-                    : 'text-[#5A5245] hover:text-[#1A1A1A] hover:bg-[#EAE5D9]/70'
+                    : 'text-[#5A5245] dark:text-slate-300 hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#EAE5D9]/70 dark:hover:bg-slate-700/60'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#C8BFA8]' : 'text-[#8C7A6B]'}`} />
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#C8BFA8]' : 'text-[#8C7A6B] dark:text-slate-400'}`} />
                 <span className="leading-none pt-0.5">{opt.label}</span>
               </button>
             );
@@ -107,9 +108,9 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
             <div className={`flex items-center rounded-xl border pl-2.5 pr-8 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
               timeRange === 'month'
                 ? 'bg-[#1A1A1A] text-[#FDFBF7] border-[#1A1A1A] shadow-xs'
-                : 'bg-[#FDFBF7] text-[#4A453B] border-[#E8E4DD] hover:bg-[#F5F1E8]'
+                : 'bg-[#FDFBF7] dark:bg-slate-800 text-[#4A453B] dark:text-slate-200 border-[#E8E4DD] dark:border-slate-700 hover:bg-[#F5F1E8] dark:hover:bg-slate-700'
             }`}>
-              <Calendar className={`w-3.5 h-3.5 mr-1.5 shrink-0 ${timeRange === 'month' ? 'text-[#C8BFA8]' : 'text-[#8C7A6B]'}`} />
+              <Calendar className={`w-3.5 h-3.5 mr-1.5 shrink-0 ${timeRange === 'month' ? 'text-[#C8BFA8]' : 'text-[#8C7A6B] dark:text-slate-400'}`} />
               <select
                 id="month-select-dropdown"
                 ref={selectRef}
@@ -125,14 +126,14 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                   <option 
                     key={m.value} 
                     value={m.value} 
-                    className="bg-white text-[#1A1A1A] py-1 text-xs"
+                    className="bg-white dark:bg-slate-900 text-[#1A1A1A] dark:text-slate-100 py-1 text-xs"
                   >
                     {m.label} ({m.count} {m.count === 1 ? 'reserva' : 'reservas'})
                   </option>
                 ))}
               </select>
               <ChevronDown className={`w-3.5 h-3.5 absolute right-2.5 pointer-events-none ${
-                timeRange === 'month' ? 'text-[#C8BFA8]' : 'text-[#8C7A6B]'
+                timeRange === 'month' ? 'text-[#C8BFA8]' : 'text-[#8C7A6B] dark:text-slate-400'
               }`} />
             </div>
           </div>
@@ -142,18 +143,18 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       {/* Screen Reader & Visual Announcement Bar (aria-live="polite", CLS = 0) */}
       <div 
         aria-live="polite" 
-        className="w-full lg:w-auto flex items-center justify-between lg:justify-end gap-2 text-xs text-[#7A6E5D] pt-2 lg:pt-0 border-t lg:border-t-0 border-[#F0ECE1] shrink-0 min-h-[28px]"
+        className="w-full lg:w-auto flex items-center justify-between lg:justify-end gap-2 text-xs text-[#7A6E5D] dark:text-slate-400 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#F0ECE1] dark:border-slate-800 shrink-0 min-h-[28px]"
       >
         <div className="flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-[#8C7A6B] shrink-0" />
-          <span className="font-medium text-[#5A5245] truncate max-w-[240px] sm:max-w-none">
+          <Clock className="w-3.5 h-3.5 text-[#8C7A6B] dark:text-slate-400 shrink-0" aria-hidden="true" />
+          <span className="font-medium text-[#5A5245] dark:text-slate-300 truncate max-w-[240px] sm:max-w-none">
             {dateRangeLabel}
           </span>
         </div>
 
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F5F1E8] text-[#1A1A1A] font-semibold text-[11px] border border-[#E8E4DD] shrink-0">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F5F1E8] dark:bg-slate-800 text-[#1A1A1A] dark:text-slate-200 font-semibold text-[11px] border border-[#E8E4DD] dark:border-slate-700 shrink-0">
           <span className="font-mono-numbers">{filteredBookingsCount}</span>
-          <span className="text-[#7A6E5D] font-normal">de</span>
+          <span className="text-[#7A6E5D] dark:text-slate-400 font-normal">de</span>
           <span className="font-mono-numbers">{totalBookingsCount}</span>
         </span>
       </div>
