@@ -1,6 +1,91 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { PilatesBooking, MetricSummary } from '../types';
+import { PilatesBooking, MetricSummary, TimeRangeOption, MonthOption } from '../types';
+
+export const SPANISH_MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+export const SPANISH_MONTHS_SHORT = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+];
+
+/**
+ * Robust date parser supporting Excel serial numbers, ISO strings,
+ * Latin DD/MM/YYYY formats, timestamps and Date objects.
+ */
+export function parseRecordDate(dateVal: any): Date | null {
+  if (dateVal === null || dateVal === undefined || dateVal === '') return null;
+  
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? null : dateVal;
+  }
+
+  // Handle number or numeric string representing Excel serial or Unix timestamp
+  if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && String(dateVal).trim() !== '')) {
+    const num = Number(dateVal);
+    // Excel serial dates: ~20000 to ~90000
+    if (num > 20000 && num < 90000) {
+      try {
+        const dateObj = XLSX.SSF.parse_date_code(num);
+        if (dateObj && dateObj.y && dateObj.m && dateObj.d) {
+          return new Date(dateObj.y, dateObj.m - 1, dateObj.d, dateObj.H || 0, dateObj.M || 0, dateObj.S || 0);
+        }
+      } catch {
+        // continue
+      }
+    }
+    // Unix epoch timestamp in ms (> year 2000)
+    if (num > 946684800000 && num < 3000000000000) {
+      const d = new Date(num);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Unix epoch in seconds
+    if (num > 946684800 && num < 3000000000) {
+      const d = new Date(num * 1000);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  // Pattern 1: ISO YYYY-MM-DD or YYYY/MM/DD with optional time
+  const isoMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    const hour = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
+    const min = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+    const sec = isoMatch[6] ? parseInt(isoMatch[6], 10) : 0;
+    const d = new Date(year, month, day, hour, min, sec);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Pattern 2: DD/MM/YYYY or DD-MM-YYYY with optional time
+  const latinMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (latinMatch) {
+    const day = parseInt(latinMatch[1], 10);
+    const month = parseInt(latinMatch[2], 10) - 1;
+    const year = parseInt(latinMatch[3], 10);
+    const hour = latinMatch[4] ? parseInt(latinMatch[4], 10) : 0;
+    const min = latinMatch[5] ? parseInt(latinMatch[5], 10) : 0;
+    const sec = latinMatch[6] ? parseInt(latinMatch[6], 10) : 0;
+    const d = new Date(year, month, day, hour, min, sec);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Fallback to native Date parser
+  const fallback = new Date(str);
+  if (!isNaN(fallback.getTime())) {
+    return fallback;
+  }
+
+  return null;
+}
 
 /**
  * Normalizes column header strings to a clean key
@@ -279,3 +364,221 @@ export function exportToCSV(bookings: PilatesBooking[], filename = 'S8_Pilates_R
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * Extracts unique available months from the bookings dataset, sorted from newest to oldest
+ */
+export function getAvailableMonths(bookings: PilatesBooking[]): MonthOption[] {
+  const map = new Map<string, { label: string; count: number }>();
+
+  for (let i = 0; i < bookings.length; i++) {
+    const b = bookings[i];
+    const date = parseRecordDate(b.fecha) || parseRecordDate(b.submited);
+    if (date) {
+      const year = date.getFullYear();
+      const monthNum = date.getMonth() + 1;
+      const key = `${year}-${String(monthNum).padStart(2, '0')}`;
+      const existing = map.get(key);
+      const label = `${SPANISH_MONTHS[monthNum - 1]} ${year}`;
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(key, { label, count: 1 });
+      }
+    }
+  }
+
+  return Array.from(map.entries())
+    .map(([value, { label, count }]) => ({ value, label, count }))
+    .sort((a, b) => b.value.localeCompare(a.value));
+}
+
+/**
+ * Pure and synchronous (<16ms) reactive filtering function by time window
+ * - '7d': Records within the last 7 calendar days from dataset max date (or current date)
+ * - '30d': Records within the last 30 calendar days from dataset max date
+ * - 'month': Records matching the selected month ('YYYY-MM')
+ * - 'all': All records (complete historical dataset)
+ */
+export function getFilteredData(
+  data: PilatesBooking[],
+  range: TimeRangeOption,
+  selectedMonth?: string
+): PilatesBooking[] {
+  if (!data || data.length === 0 || range === 'all') {
+    return data;
+  }
+
+  // Pre-parse dates once for performance (<16ms INP)
+  const parsedItems: { booking: PilatesBooking; date: Date | null }[] = new Array(data.length);
+  let maxTime = -Infinity;
+
+  for (let i = 0; i < data.length; i++) {
+    const b = data[i];
+    const d = parseRecordDate(b.fecha) || parseRecordDate(b.submited);
+    parsedItems[i] = { booking: b, date: d };
+    if (d) {
+      const t = d.getTime();
+      if (t > maxTime) {
+        maxTime = t;
+      }
+    }
+  }
+
+  if (maxTime === -Infinity) {
+    return data;
+  }
+
+  const maxDate = new Date(maxTime);
+  const endOfMaxDay = new Date(
+    maxDate.getFullYear(),
+    maxDate.getMonth(),
+    maxDate.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+
+  if (range === '7d') {
+    const startOfRange = new Date(
+      maxDate.getFullYear(),
+      maxDate.getMonth(),
+      maxDate.getDate() - 6,
+      0,
+      0,
+      0,
+      0
+    );
+    const startMs = startOfRange.getTime();
+    const endMs = endOfMaxDay.getTime();
+
+    const result: PilatesBooking[] = [];
+    for (let i = 0; i < parsedItems.length; i++) {
+      const item = parsedItems[i];
+      if (item.date) {
+        const t = item.date.getTime();
+        if (t >= startMs && t <= endMs) {
+          result.push(item.booking);
+        }
+      }
+    }
+    return result;
+  }
+
+  if (range === '30d') {
+    const startOfRange = new Date(
+      maxDate.getFullYear(),
+      maxDate.getMonth(),
+      maxDate.getDate() - 29,
+      0,
+      0,
+      0,
+      0
+    );
+    const startMs = startOfRange.getTime();
+    const endMs = endOfMaxDay.getTime();
+
+    const result: PilatesBooking[] = [];
+    for (let i = 0; i < parsedItems.length; i++) {
+      const item = parsedItems[i];
+      if (item.date) {
+        const t = item.date.getTime();
+        if (t >= startMs && t <= endMs) {
+          result.push(item.booking);
+        }
+      }
+    }
+    return result;
+  }
+
+  if (range === 'month') {
+    let targetKey = selectedMonth;
+    if (!targetKey) {
+      const y = maxDate.getFullYear();
+      const m = String(maxDate.getMonth() + 1).padStart(2, '0');
+      targetKey = `${y}-${m}`;
+    }
+
+    const [targetYearStr, targetMonthStr] = targetKey.split('-');
+    const targetYear = parseInt(targetYearStr, 10);
+    const targetMonth = parseInt(targetMonthStr, 10);
+
+    const result: PilatesBooking[] = [];
+    for (let i = 0; i < parsedItems.length; i++) {
+      const item = parsedItems[i];
+      if (item.date) {
+        if (
+          item.date.getFullYear() === targetYear &&
+          item.date.getMonth() + 1 === targetMonth
+        ) {
+          result.push(item.booking);
+        }
+      }
+    }
+    return result;
+  }
+
+  return data;
+}
+
+/**
+ * Generates an informative human-readable label for the current time range
+ */
+export function getDateRangeLabel(
+  data: PilatesBooking[],
+  range: TimeRangeOption,
+  selectedMonth?: string
+): string {
+  if (range === 'all') {
+    return 'Histórico Completo';
+  }
+
+  let maxTime = -Infinity;
+  for (let i = 0; i < data.length; i++) {
+    const d = parseRecordDate(data[i].fecha) || parseRecordDate(data[i].submited);
+    if (d && d.getTime() > maxTime) {
+      maxTime = d.getTime();
+    }
+  }
+
+  if (maxTime === -Infinity) {
+    return 'Período seleccionado';
+  }
+
+  const maxDate = new Date(maxTime);
+
+  if (range === '7d') {
+    const startDate = new Date(
+      maxDate.getFullYear(),
+      maxDate.getMonth(),
+      maxDate.getDate() - 6
+    );
+    const startStr = `${startDate.getDate()} ${SPANISH_MONTHS_SHORT[startDate.getMonth()]}`;
+    const endStr = `${maxDate.getDate()} ${SPANISH_MONTHS_SHORT[maxDate.getMonth()]} ${maxDate.getFullYear()}`;
+    return `Últimos 7 días (${startStr} - ${endStr})`;
+  }
+
+  if (range === '30d') {
+    const startDate = new Date(
+      maxDate.getFullYear(),
+      maxDate.getMonth(),
+      maxDate.getDate() - 29
+    );
+    const startStr = `${startDate.getDate()} ${SPANISH_MONTHS_SHORT[startDate.getMonth()]}`;
+    const endStr = `${maxDate.getDate()} ${SPANISH_MONTHS_SHORT[maxDate.getMonth()]} ${maxDate.getFullYear()}`;
+    return `Últimos 30 días (${startStr} - ${endStr})`;
+  }
+
+  if (range === 'month') {
+    if (selectedMonth) {
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      const mIdx = parseInt(monthStr, 10) - 1;
+      return `${SPANISH_MONTHS[mIdx] || ''} ${yearStr}`;
+    }
+    return `${SPANISH_MONTHS[maxDate.getMonth()]} ${maxDate.getFullYear()}`;
+  }
+
+  return 'Histórico Completo';
+}
+

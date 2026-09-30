@@ -36,7 +36,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
       
       {/* 1. HERO KPI CARD (Span 2 Columns) */}
-      <div className="md:col-span-2 bg-gradient-to-br from-[#1A1A1A] to-[#2B2823] text-[#FDFBF7] rounded-2xl p-6 sm:p-8 border border-[#2B2823] shadow-md flex flex-col justify-between relative overflow-hidden group">
+      <div className="md:col-span-2 bg-gradient-to-br from-[#1A1A1A] to-[#2B2823] text-[#FDFBF7] rounded-2xl p-6 sm:p-8 border border-[#2B2823] shadow-md flex flex-col justify-between relative overflow-hidden group min-h-[260px]">
         {/* Subtle Decorative Background Pattern */}
         <div className="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#EAE5D9]/5 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
         
@@ -53,7 +53,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
 
           <div className="mt-2 mb-6">
             <p className="text-xs uppercase tracking-widest text-[#A8A092] font-semibold mb-1">
-              Total de Reservas Registradas
+              Total de Reservas en este Período
             </p>
             <div className="flex items-baseline gap-4">
               <span className="font-serif-luxury text-5xl sm:text-7xl font-bold tracking-tight text-[#FDFBF7]">
@@ -80,20 +80,20 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
           <div className="bg-[#26221D] p-3 rounded-xl border border-[#38332B]">
             <p className="text-[#A8A092] text-[11px] mb-0.5">Disciplina Top</p>
             <p className="font-semibold text-[#FDFBF7] text-sm truncate">
-              {metrics.disciplinas[0]?.name || 'Reformer'}
+              {metrics.disciplinas[0]?.name || 'Sin registros'}
             </p>
           </div>
           <div className="col-span-2 sm:col-span-1 bg-[#26221D] p-3 rounded-xl border border-[#38332B]">
             <p className="text-[#A8A092] text-[11px] mb-0.5">Coach Principal</p>
             <p className="font-semibold text-[#FDFBF7] text-sm truncate">
-              {metrics.coaches[0]?.name || 'Agustina'}
+              {metrics.coaches[0]?.name || 'Sin registros'}
             </p>
           </div>
         </div>
       </div>
 
       {/* 2. STATUS DE RECORDATORIOS CARD */}
-      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between">
+      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between min-h-[260px]">
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-[#1A1A1A] flex items-center gap-2">
@@ -126,7 +126,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
               />
               <div 
                 className="bg-[#E57373] h-full rounded-full transition-all duration-500 ml-0.5" 
-                style={{ width: `${100 - metrics.porcentajeRecordatorios}%` }} 
+                style={{ width: `${metrics.totalReservas === 0 ? 0 : 100 - metrics.porcentajeRecordatorios}%` }} 
               />
             </div>
           </div>
@@ -170,7 +170,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
       </div>
 
       {/* 3. DISTRIBUCIÓN POR DISCIPLINA CARD (DONUT CHART) */}
-      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between">
+      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between min-h-[260px]">
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-[#1A1A1A] flex items-center gap-2">
@@ -205,7 +205,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
       </div>
 
       {/* 4. CARGA DE COACHES CARD */}
-      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between">
+      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs flex flex-col justify-between min-h-[260px]">
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-[#1A1A1A] flex items-center gap-2">
@@ -221,50 +221,56 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
             Volumen de clases y confirmaciones por coach.
           </p>
 
-          <div className="space-y-2.5">
-            {metrics.coaches.map((coach) => {
-              const isSelected = selectedCoach === coach.name;
-              return (
-                <div
-                  key={coach.name}
-                  onClick={() => onSelectCoach(isSelected ? '' : coach.name)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      onSelectCoach(isSelected ? '' : coach.name);
-                    }
-                  }}
-                  className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    isSelected 
-                      ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' 
-                      : 'bg-[#FDFBF7] hover:bg-[#F5F1E8] border-[#E8E4DD]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs uppercase ${
-                      isSelected ? 'bg-white text-[#1A1A1A]' : 'bg-[#EAE5D9] text-[#4A453B]'
-                    }`}>
-                      {coach.name.charAt(0)}
+          {metrics.coaches.length === 0 ? (
+            <div className="py-8 text-center text-xs text-[#8C7A6B] italic">
+              Sin actividad registrada en este período
+            </div>
+          ) : (
+            <div className="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
+              {metrics.coaches.map((coach) => {
+                const isSelected = selectedCoach === coach.name;
+                return (
+                  <div
+                    key={coach.name}
+                    onClick={() => onSelectCoach(isSelected ? '' : coach.name)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        onSelectCoach(isSelected ? '' : coach.name);
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                      isSelected 
+                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' 
+                        : 'bg-[#FDFBF7] hover:bg-[#F5F1E8] border-[#E8E4DD]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs uppercase ${
+                        isSelected ? 'bg-white text-[#1A1A1A]' : 'bg-[#EAE5D9] text-[#4A453B]'
+                      }`}>
+                        {coach.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold leading-tight">{coach.name}</p>
+                        <p className={`text-[10px] ${isSelected ? 'text-white/70' : 'text-[#7A6E5D]'}`}>
+                          {coach.confirmados} env. / {coach.pendientes} pend.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold leading-tight">{coach.name}</p>
-                      <p className={`text-[10px] ${isSelected ? 'text-white/70' : 'text-[#7A6E5D]'}`}>
-                        {coach.confirmados} env. / {coach.pendientes} pend.
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="text-right">
-                    <span className="text-xs font-mono-numbers font-bold">{coach.total}</span>
-                    <span className={`text-[10px] block ${isSelected ? 'text-white/70' : 'text-[#7A6E5D]'}`}>
-                      {coach.percentage}%
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xs font-mono-numbers font-bold">{coach.total}</span>
+                      <span className={`text-[10px] block ${isSelected ? 'text-white/70' : 'text-[#7A6E5D]'}`}>
+                        {coach.percentage}%
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {selectedCoach && (
@@ -279,7 +285,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
       </div>
 
       {/* 5. TOP CLASES POPULARES CARD */}
-      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs">
+      <div className="bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs min-h-[160px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm text-[#1A1A1A] flex items-center gap-2">
             <Award className="w-4 h-4 text-[#8C7A6B]" />
@@ -288,23 +294,29 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
           <span className="text-[11px] text-[#7A6E5D] font-medium">Categorías</span>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-1">
-          {metrics.clasesPopular.map((clase) => (
-            <div
-              key={clase.name}
-              className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F1E8] rounded-xl text-xs font-semibold text-[#4A453B] border border-[#E8E4DD]"
-            >
-              <span>{clase.name}</span>
-              <span className="px-1.5 py-0.5 bg-[#EAE5D9] text-[#1A1A1A] rounded-md font-mono-numbers text-[10px]">
-                {clase.count}
-              </span>
-            </div>
-          ))}
-        </div>
+        {metrics.clasesPopular.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[#8C7A6B] italic">
+            Sin clases en este período
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {metrics.clasesPopular.map((clase) => (
+              <div
+                key={clase.name}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F1E8] rounded-xl text-xs font-semibold text-[#4A453B] border border-[#E8E4DD]"
+              >
+                <span>{clase.name}</span>
+                <span className="px-1.5 py-0.5 bg-[#EAE5D9] text-[#1A1A1A] rounded-md font-mono-numbers text-[10px]">
+                  {clase.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 6. HORARIOS DE MAYOR AFLUENCIA CARD (FIXED NO-OVERLAP) */}
-      <div className="md:col-span-3 bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs">
+      {/* 6. HORARIOS DE MAYOR AFLUENCIA CARD */}
+      <div className="md:col-span-3 bg-white rounded-2xl p-6 border border-[#E8E4DD] shadow-xs min-h-[160px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm text-[#1A1A1A] flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#8C7A6B]" />
@@ -313,21 +325,27 @@ export const BentoGrid: React.FC<BentoGridProps> = ({
           <span className="text-[11px] text-[#7A6E5D] font-medium">Turnos Top</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-1">
-          {metrics.horariosPico.map((hp) => (
-            <div 
-              key={hp.hora} 
-              className="p-3 bg-[#FDFBF7] rounded-xl border border-[#E8E4DD] text-center flex flex-col justify-between items-center min-h-[76px] shadow-2xs hover:border-[#D9D2C5] transition-all"
-            >
-              <span className="font-mono-numbers text-sm font-bold text-[#1A1A1A] block tracking-tight">
-                {hp.hora} hs
-              </span>
-              <span className="text-[11px] font-semibold text-[#5A5245] bg-[#F5F1E8] px-2.5 py-1 rounded-md mt-1.5 border border-[#E8E4DD] whitespace-nowrap">
-                {hp.count} {hp.count === 1 ? 'reserva' : 'reservas'}
-              </span>
-            </div>
-          ))}
-        </div>
+        {metrics.horariosPico.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[#8C7A6B] italic">
+            Sin turnos en este período
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-1">
+            {metrics.horariosPico.map((hp) => (
+              <div 
+                key={hp.hora} 
+                className="p-3 bg-[#FDFBF7] rounded-xl border border-[#E8E4DD] text-center flex flex-col justify-between items-center min-h-[76px] shadow-2xs hover:border-[#D9D2C5] transition-all"
+              >
+                <span className="font-mono-numbers text-sm font-bold text-[#1A1A1A] block tracking-tight">
+                  {hp.hora} hs
+                </span>
+                <span className="text-[11px] font-semibold text-[#5A5245] bg-[#F5F1E8] px-2.5 py-1 rounded-md mt-1.5 border border-[#E8E4DD] whitespace-nowrap">
+                  {hp.count} {hp.count === 1 ? 'reserva' : 'reservas'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

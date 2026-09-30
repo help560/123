@@ -1,3 +1,11 @@
+export type TimeRangeOption = '7d' | '30d' | 'month' | 'all';
+
+export interface MonthOption {
+  value: string; // e.g. "2026-07"
+  label: string; // e.g. "Julio 2026"
+  count: number;
+}
+
 export interface PilatesBooking {
   id: string;
   submited: string;
@@ -20,6 +28,8 @@ export interface FilterState {
   recordatorio: 'all' | 'enviado' | 'pendiente';
   fechaInicio: string;
   fechaFin: string;
+  timeRange?: TimeRangeOption;
+  selectedMonth?: string;
 }
 
 export interface MetricSummary {

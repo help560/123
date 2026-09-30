@@ -3,19 +3,27 @@
  * @license Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
-import { PilatesBooking, FilterState } from './types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { PilatesBooking, FilterState, TimeRangeOption } from './types';
 import { SAMPLE_BOOKINGS } from './data/sampleData';
-import { parseUploadedFile, calculateMetrics, exportToCSV } from './utils/parser';
+import { 
+  parseUploadedFile, 
+  calculateMetrics, 
+  exportToCSV,
+  getFilteredData,
+  getAvailableMonths,
+  getDateRangeLabel
+} from './utils/parser';
 
 import { Header } from './components/Header';
 import { Dropzone } from './components/Dropzone';
+import { TimeRangeSelector } from './components/TimeRangeSelector';
 import { BentoGrid } from './components/BentoGrid';
 import { FilterBar } from './components/FilterBar';
 import { DataTable } from './components/DataTable';
 import { BookingDetailModal } from './components/BookingDetailModal';
 
-import { CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ShieldCheck, CalendarX, RotateCcw } from 'lucide-react';
 
 export default function App() {
   // Estado Cero: Starts on Dropzone screen (isDropzoneVisible = true)
@@ -24,6 +32,10 @@ export default function App() {
   const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Time Range Selection State
+  const [timeRange, setTimeRange] = useState<TimeRangeOption>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   // Selected Detail Modal
   const [selectedBooking, setSelectedBooking] = useState<PilatesBooking | null>(null);
@@ -45,6 +57,20 @@ export default function App() {
     }, 4000);
   };
 
+  // Available unique months extracted dynamically from dataset
+  const availableMonths = useMemo(() => getAvailableMonths(bookings), [bookings]);
+
+  // Keep selectedMonth updated to latest month when dataset changes
+  useEffect(() => {
+    if (availableMonths.length > 0) {
+      if (!selectedMonth || !availableMonths.some(m => m.value === selectedMonth)) {
+        setSelectedMonth(availableMonths[0].value);
+      }
+    } else {
+      setSelectedMonth('');
+    }
+  }, [availableMonths, selectedMonth]);
+
   // Handle File Upload from Dropzone or Header
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
@@ -56,6 +82,7 @@ export default function App() {
         setBookings(parsedBookings);
         setFileName(file.name);
         setIsDropzoneVisible(false);
+        setTimeRange('all');
         showToast(`¡Encendido Exitoso! Se procesaron ${parsedBookings.length} reservas de ${file.name}.`);
       }
     } catch (err) {
@@ -71,6 +98,7 @@ export default function App() {
     setBookings(SAMPLE_BOOKINGS);
     setFileName('S8_Pilates_Julio_2026.xlsx');
     setIsDropzoneVisible(false);
+    setTimeRange('all');
     showToast(`Cargadas ${SAMPLE_BOOKINGS.length} reservas de muestra de Studio 8 Pilates.`);
   };
 
@@ -90,7 +118,12 @@ export default function App() {
     });
   };
 
-  // Available unique lists
+  // 1. Pure Reactive Time-Filtered Sub-Dataset (synchronous, <16ms)
+  const timeFilteredBookings = useMemo(() => {
+    return getFilteredData(bookings, timeRange, selectedMonth);
+  }, [bookings, timeRange, selectedMonth]);
+
+  // Available unique coaches & disciplinas
   const uniqueCoaches = useMemo(() => {
     const set = new Set<string>();
     bookings.forEach(b => { if (b.coach) set.add(b.coach); });
@@ -103,9 +136,9 @@ export default function App() {
     return Array.from(set).sort();
   }, [bookings]);
 
-  // Filtered dataset
+  // 2. Secondary Filter Layer (search query, coach, discipline, reminder status)
   const filteredBookings = useMemo(() => {
-    return bookings.filter(b => {
+    return timeFilteredBookings.filter(b => {
       // Search
       if (filters.search) {
         const q = filters.search.toLowerCase();
@@ -129,9 +162,14 @@ export default function App() {
       }
       return true;
     });
-  }, [bookings, filters]);
+  }, [timeFilteredBookings, filters]);
 
-  // Summary metrics
+  // Informative human-readable date window label
+  const dateRangeLabel = useMemo(() => {
+    return getDateRangeLabel(bookings, timeRange, selectedMonth);
+  }, [bookings, timeRange, selectedMonth]);
+
+  // Summary metrics calculated strictly over the filtered dataset
   const metrics = useMemo(() => calculateMetrics(filteredBookings), [filteredBookings]);
 
   return (
@@ -164,6 +202,8 @@ export default function App() {
           setBookings([]);
           setFileName(null);
           setIsDropzoneVisible(true);
+          setTimeRange('all');
+          setSelectedMonth('');
         }}
       />
 
@@ -179,32 +219,83 @@ export default function App() {
           />
         ) : (
           <div>
-            {/* Bento Grid Analytics */}
-            <BentoGrid
-              metrics={metrics}
-              selectedCoach={filters.coach}
-              selectedDisciplina={filters.disciplina}
-              selectedRecordatorio={filters.recordatorio}
-              onSelectCoach={(coach) => handleFilterChange({ coach })}
-              onSelectDisciplina={(disciplina) => handleFilterChange({ disciplina })}
-              onSelectRecordatorio={(recordatorio) => handleFilterChange({ recordatorio })}
+            {/* Dynamic Time Range Filter Control (Positioned in Bento Grid Sub-Header) */}
+            <TimeRangeSelector
+              timeRange={timeRange}
+              selectedMonth={selectedMonth}
+              availableMonths={availableMonths}
+              totalBookingsCount={bookings.length}
+              filteredBookingsCount={timeFilteredBookings.length}
+              dateRangeLabel={dateRangeLabel}
+              onRangeChange={(newRange) => setTimeRange(newRange)}
+              onMonthChange={(newMonth) => setSelectedMonth(newMonth)}
             />
 
-            {/* Filter Bar */}
-            <FilterBar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onResetFilters={handleResetFilters}
-              coaches={uniqueCoaches}
-              disciplinas={uniqueDisciplinas}
-              totalResults={filteredBookings.length}
-            />
+            {/* Empty State for zero matches in selected time range */}
+            {timeFilteredBookings.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 border border-[#E8E4DD] shadow-xs text-center my-6 flex flex-col items-center justify-center min-h-[300px]">
+                <div className="w-14 h-14 rounded-full bg-[#F5F1E8] flex items-center justify-center text-[#8C7A6B] mb-4 border border-[#E8E4DD]">
+                  <CalendarX className="w-7 h-7" />
+                </div>
+                <h3 className="font-serif-luxury text-2xl font-bold text-[#1A1A1A] mb-1">
+                  Sin Reservas en este Período
+                </h3>
+                <p className="text-xs sm:text-sm text-[#7A6E5D] max-w-md mb-5 leading-relaxed">
+                  No se encontraron reservas registradas para <strong className="text-[#1A1A1A] font-semibold">{dateRangeLabel}</strong>. Puedes seleccionar otro mes o regresar a la vista completa de reservas.
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => setTimeRange('all')}
+                    type="button"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A1A] text-[#FDFBF7] text-xs font-semibold hover:bg-[#2B2823] transition-all cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-4 h-4 text-[#C8BFA8]" />
+                    <span>Ver Todo el Histórico ({bookings.length} reservas)</span>
+                  </button>
+                  {availableMonths.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setTimeRange('month');
+                        setSelectedMonth(availableMonths[0]?.value || '');
+                      }}
+                      type="button"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] text-[#4A453B] text-xs font-semibold hover:bg-[#EAE5D9] transition-all cursor-pointer border border-[#E8E4DD]"
+                    >
+                      <span>Ir al Mes Más Reciente ({availableMonths[0]?.label})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Bento Grid Analytics */}
+                <BentoGrid
+                  metrics={metrics}
+                  selectedCoach={filters.coach}
+                  selectedDisciplina={filters.disciplina}
+                  selectedRecordatorio={filters.recordatorio}
+                  onSelectCoach={(coach) => handleFilterChange({ coach })}
+                  onSelectDisciplina={(disciplina) => handleFilterChange({ disciplina })}
+                  onSelectRecordatorio={(recordatorio) => handleFilterChange({ recordatorio })}
+                />
 
-            {/* Data Table */}
-            <DataTable
-              bookings={filteredBookings}
-              onSelectBooking={(booking) => setSelectedBooking(booking)}
-            />
+                {/* Filter Bar */}
+                <FilterBar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onResetFilters={handleResetFilters}
+                  coaches={uniqueCoaches}
+                  disciplinas={uniqueDisciplinas}
+                  totalResults={filteredBookings.length}
+                />
+
+                {/* Data Table */}
+                <DataTable
+                  bookings={filteredBookings}
+                  onSelectBooking={(booking) => setSelectedBooking(booking)}
+                />
+              </>
+            )}
           </div>
         )}
 
