@@ -29,9 +29,8 @@ export const DonutChart: React.FC<DonutChartProps> = ({
 
   if (total === 0) {
     return (
-      <div className="min-h-[190px] flex flex-col items-center justify-center text-xs text-[#8C7A6B] py-6">
-        <p className="font-semibold text-sm text-[#1A1A1A] mb-1">Sin datos de disciplinas</p>
-        <p className="text-[11px] text-[#8C7A6B]">No hay reservas registradas en este período</p>
+      <div className="h-40 flex items-center justify-center text-xs text-[#8C7A6B]">
+        Sin datos disponibles
       </div>
     );
   }
@@ -58,18 +57,10 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   });
 
   return (
-    <figure className="min-h-[190px] flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
-      <figcaption className="sr-only">
-        Gráfico circular y desglose porcentual de reservas por disciplina de pilates
-      </figcaption>
-
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
       {/* SVG Donut */}
-      <div className="relative w-36 h-36 aspect-square shrink-0 flex items-center justify-center">
-        <svg 
-          viewBox="0 0 100 100" 
-          className="w-full h-full -rotate-90"
-          aria-hidden="true"
-        >
+      <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
           <circle
             cx="50"
             cy="50"
@@ -97,7 +88,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
 
         {/* Donut Center Counter */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          <span className="font-serif-luxury text-2xl font-bold text-[#1A1A1A] leading-none">
+          <span className="font-serif-luxury text-xl font-bold text-[#1A1A1A] leading-none">
             {total}
           </span>
           <span className="text-[10px] uppercase tracking-wider text-[#7A6E5D] font-semibold mt-0.5">
@@ -107,41 +98,44 @@ export const DonutChart: React.FC<DonutChartProps> = ({
       </div>
 
       {/* Legend List */}
-      <ul role="list" className="flex-1 space-y-2 w-full">
+      <div className="flex-1 space-y-2 w-full">
         {slices.map((slice) => (
-          <li key={slice.name}>
-            <button
-              type="button"
-              aria-pressed={slice.isSelected}
-              onClick={() => onSelectDisciplina && onSelectDisciplina(slice.isSelected ? '' : slice.name)}
-              className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border text-left outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A] ${
-                slice.isSelected
-                  ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-xs'
-                  : 'bg-[#FDFBF7] hover:bg-[#F5F1E8] border-[#E8E4DD] text-[#1A1A1A]'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: slice.color }}
-                  aria-hidden="true"
-                />
-                <span className="truncate">{slice.name}</span>
-              </div>
-              <div className="flex items-center gap-2 font-mono-numbers shrink-0 ml-2">
-                <span className={slice.isSelected ? 'text-white' : 'text-[#1A1A1A]'}>
-                  {slice.count}
-                </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                  slice.isSelected ? 'bg-white/20 text-white' : 'bg-[#F5F1E8] text-[#7A6E5D]'
-                }`}>
-                  {slice.percentage}%
-                </span>
-              </div>
-            </button>
-          </li>
+          <div
+            key={slice.name}
+            onClick={() => onSelectDisciplina && onSelectDisciplina(slice.isSelected ? '' : slice.name)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                onSelectDisciplina && onSelectDisciplina(slice.isSelected ? '' : slice.name);
+              }
+            }}
+            className={`flex items-center justify-between p-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+              slice.isSelected
+                ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-xs'
+                : 'bg-[#FDFBF7] hover:bg-[#F5F1E8] border-[#E8E4DD] text-[#1A1A1A]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: slice.color }}
+              />
+              <span className="truncate">{slice.name}</span>
+            </div>
+            <div className="flex items-center gap-2 font-mono-numbers">
+              <span className={slice.isSelected ? 'text-white' : 'text-[#1A1A1A]'}>
+                {slice.count}
+              </span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                slice.isSelected ? 'bg-white/20 text-white' : 'bg-[#F5F1E8] text-[#7A6E5D]'
+              }`}>
+                {slice.percentage}%
+              </span>
+            </div>
+          </div>
         ))}
-      </ul>
-    </figure>
+      </div>
+    </div>
   );
 };
