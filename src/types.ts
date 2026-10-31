@@ -8,6 +8,7 @@ export interface MonthOption {
 
 export interface PilatesBooking {
   id: string;
+  reservationId: string;
   submited: string;
   nombre: string;
   apellido: string;
@@ -19,6 +20,8 @@ export interface PilatesBooking {
   clase: string;
   recordatorio: boolean; // true = enviado/confirmado, false = pendiente
   telefono: string;
+  estatus: string; // "CANCELADO", "", etc.
+  cancelada: boolean;
 }
 
 export interface FilterState {
@@ -26,19 +29,35 @@ export interface FilterState {
   disciplina: string;
   coach: string;
   recordatorio: 'all' | 'enviado' | 'pendiente';
+  estatus: 'all' | 'activas' | 'canceladas';
   fechaInicio: string;
   fechaFin: string;
   timeRange?: TimeRangeOption;
   selectedMonth?: string;
 }
 
+export interface MonthlyTrendItem {
+  monthKey: string; // "2026-07"
+  label: string;    // "Jul 2026"
+  fullLabel: string;// "Julio 2026"
+  total: number;
+  activas: number;
+  canceladas: number;
+  tasaCancelacion: number;
+  growthRate?: number; // % vs previous month
+}
+
 export interface MetricSummary {
   totalReservas: number;
+  activas: number;
+  canceladas: number;
+  tasaCancelacion: number;
   recordatoriosEnviados: number;
   recordatoriosPendientes: number;
   porcentajeRecordatorios: number;
-  disciplinas: { name: string; count: number; percentage: number }[];
-  coaches: { name: string; total: number; confirmados: number; pendientes: number; percentage: number }[];
+  monthlyTrend: MonthlyTrendItem[];
+  disciplinas: { name: string; count: number; percentage: number; activas: number; canceladas: number }[];
+  coaches: { name: string; total: number; confirmados: number; pendientes: number; canceladas: number; percentage: number }[];
   clasesPopular: { name: string; count: number }[];
   horariosPico: { hora: string; count: number }[];
 }

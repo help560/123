@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { PilatesBooking, MetricSummary, TimeRangeOption, MonthOption } from '../types';
+import { PilatesBooking, MetricSummary, TimeRangeOption, MonthOption, MonthlyTrendItem } from '../types';
 
 export const SPANISH_MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -103,6 +103,8 @@ function normalizeHeaderKey(header: string): string {
   if (clean.includes('CLASE') || clean.includes('CLASS') || clean.includes('TIPO')) return 'clase';
   if (clean.includes('REDOR') || clean.includes('RECOR') || clean.includes('REMIND') || clean.includes('NOTIF')) return 'recordatorio';
   if (clean.includes('TELEF') || clean.includes('PHONE') || clean.includes('CEL')) return 'telefono';
+  if (clean.includes('RESERV') || clean.includes('BOOKINGID') || clean === 'ID') return 'reservationid';
+  if (clean.includes('ESTAT') || clean.includes('STATUS') || clean.includes('ESTAD')) return 'estatus';
   return clean.toLowerCase();
 }
 
@@ -176,19 +178,27 @@ export function normalizeRawRow(row: Record<string, any>, index: number): Pilate
     hora = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
   }
 
+  const reservationId = String(mapped.reservationid || mapped.id || '').trim();
+  const estatusRaw = String(mapped.estatus || '').trim();
+  const isCancelled = estatusRaw.toUpperCase().includes('CANCEL') || (nombre === '' && apellido === '' && estatusRaw.toUpperCase().includes('CANCEL'));
+  const estatus = isCancelled ? 'CANCELADO' : (estatusRaw || 'ACTIVA');
+
   return {
     id: `booking-${Date.now()}-${index}`,
+    reservationId: reservationId,
     submited: String(mapped.submited || '').trim(),
-    nombre: nombre || 'Cliente',
+    nombre: nombre || (isCancelled ? 'Cancelación Registrada' : 'Cliente'),
     apellido: apellido,
     correo: String(mapped.correo || '').trim(),
     disciplina: disciplina,
     fecha: fecha || new Date().toISOString().split('T')[0],
     hora: hora || '09:00',
-    coach: String(mapped.coach || 'Agustina').trim(),
+    coach: String(mapped.coach || (isCancelled ? 'Sin Asignar' : 'Agustina')).trim(),
     clase: clase || 'General',
     recordatorio: parseReminderValue(mapped.recordatorio),
-    telefono: String(mapped.telefono || '').trim()
+    telefono: String(mapped.telefono || '').trim(),
+    estatus: estatus,
+    cancelada: isCancelled
   };
 }
 
@@ -250,9 +260,13 @@ export function calculateMetrics(bookings: PilatesBooking[]): MetricSummary {
   if (totalReservas === 0) {
     return {
       totalReservas: 0,
+      activas: 0,
+      canceladas: 0,
+      tasaCancelacion: 0,
       recordatoriosEnviados: 0,
       recordatoriosPendientes: 0,
       porcentajeRecordatorios: 0,
+      monthlyTrend: [],
       disciplinas: [],
       coaches: [],
       clasesPopular: [],
@@ -260,31 +274,98 @@ export function calculateMetrics(bookings: PilatesBooking[]): MetricSummary {
     };
   }
 
+  const canceladas = bookings.filter(b => b.cancelada).length;
+  const activas = totalReservas - canceladas;
+  const tasaCancelacion = Math.round((canceladas / totalReservas) * 100);
+
   const recordatoriosEnviados = bookings.filter(b => b.recordatorio).length;
   const recordatoriosPendientes = totalReservas - recordatoriosEnviados;
   const porcentajeRecordatorios = Math.round((recordatoriosEnviados / totalReservas) * 100);
 
-  // Disciplines breakdown
-  const discMap: Record<string, number> = {};
+  // Monthly Trend Calculation (Activas vs Canceladas & MoM growth)
+  const monthMap: Record<string, { total: number; activas: number; canceladas: number }> = {};
   bookings.forEach(b => {
-    const d = b.disciplina || 'Otro';
-    discMap[d] = (discMap[d] || 0) + 1;
+    const d = parseRecordDate(b.fecha) || parseRecordDate(b.submited);
+    if (d) {
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      if (!monthMap[key]) {
+        monthMap[key] = { total: 0, activas: 0, canceladas: 0 };
+      }
+      monthMap[key].total += 1;
+      if (b.cancelada) {
+        monthMap[key].canceladas += 1;
+      } else {
+        monthMap[key].activas += 1;
+      }
+    }
   });
 
-  const disciplinas = Object.entries(discMap).map(([name, count]) => ({
+  const sortedMonthKeys = Object.keys(monthMap).sort();
+  const monthlyTrend: MonthlyTrendItem[] = sortedMonthKeys.map((key, idx) => {
+    const data = monthMap[key];
+    const [y, mStr] = key.split('-');
+    const mIdx = parseInt(mStr, 10) - 1;
+    const label = `${SPANISH_MONTHS_SHORT[mIdx]} ${y}`;
+    const fullLabel = `${SPANISH_MONTHS[mIdx]} ${y}`;
+    const tasaCancel = data.total > 0 ? Math.round((data.canceladas / data.total) * 100) : 0;
+    
+    let growthRate: number | undefined = undefined;
+    if (idx > 0) {
+      const prevKey = sortedMonthKeys[idx - 1];
+      const prevTotal = monthMap[prevKey].total;
+      if (prevTotal > 0) {
+        growthRate = Math.round(((data.total - prevTotal) / prevTotal) * 100);
+      }
+    }
+
+    return {
+      monthKey: key,
+      label,
+      fullLabel,
+      total: data.total,
+      activas: data.activas,
+      canceladas: data.canceladas,
+      tasaCancelacion: tasaCancel,
+      growthRate
+    };
+  });
+
+  // Disciplines breakdown
+  const discMap: Record<string, { total: number; activas: number; canceladas: number }> = {};
+  bookings.forEach(b => {
+    const d = b.disciplina || 'Otro';
+    if (!discMap[d]) {
+      discMap[d] = { total: 0, activas: 0, canceladas: 0 };
+    }
+    discMap[d].total += 1;
+    if (b.cancelada) {
+      discMap[d].canceladas += 1;
+    } else {
+      discMap[d].activas += 1;
+    }
+  });
+
+  const disciplinas = Object.entries(discMap).map(([name, stat]) => ({
     name,
-    count,
-    percentage: Math.round((count / totalReservas) * 100)
+    count: stat.total,
+    activas: stat.activas,
+    canceladas: stat.canceladas,
+    percentage: Math.round((stat.total / totalReservas) * 100)
   })).sort((a, b) => b.count - a.count);
 
   // Coach workload breakdown
-  const coachMap: Record<string, { total: number; confirmados: number; pendientes: number }> = {};
+  const coachMap: Record<string, { total: number; confirmados: number; pendientes: number; canceladas: number }> = {};
   bookings.forEach(b => {
     const c = b.coach || 'Sin Asignar';
     if (!coachMap[c]) {
-      coachMap[c] = { total: 0, confirmados: 0, pendientes: 0 };
+      coachMap[c] = { total: 0, confirmados: 0, pendientes: 0, canceladas: 0 };
     }
     coachMap[c].total += 1;
+    if (b.cancelada) {
+      coachMap[c].canceladas += 1;
+    }
     if (b.recordatorio) {
       coachMap[c].confirmados += 1;
     } else {
@@ -297,10 +378,11 @@ export function calculateMetrics(bookings: PilatesBooking[]): MetricSummary {
     total: stat.total,
     confirmados: stat.confirmados,
     pendientes: stat.pendientes,
+    canceladas: stat.canceladas,
     percentage: Math.round((stat.total / totalReservas) * 100)
   })).sort((a, b) => b.total - a.total);
 
-  // Top classes breakdown
+  // Top classes breakdown (excluding generic cancel marker if any)
   const claseMap: Record<string, number> = {};
   bookings.forEach(b => {
     const c = b.clase || 'General';
@@ -326,9 +408,13 @@ export function calculateMetrics(bookings: PilatesBooking[]): MetricSummary {
 
   return {
     totalReservas,
+    activas,
+    canceladas,
+    tasaCancelacion,
     recordatoriosEnviados,
     recordatoriosPendientes,
     porcentajeRecordatorios,
+    monthlyTrend,
     disciplinas,
     coaches,
     clasesPopular,
@@ -342,6 +428,8 @@ export function calculateMetrics(bookings: PilatesBooking[]): MetricSummary {
 export function exportToCSV(bookings: PilatesBooking[], filename = 'S8_Pilates_Reservas.csv') {
   const exportData = bookings.map(b => ({
     SUBMITED: b.submited,
+    'RESERVATION ID': b.reservationId,
+    ESTATUS: b.estatus,
     NOMBRE: b.nombre,
     APELLIDO: b.apellido,
     CORREO: b.correo,

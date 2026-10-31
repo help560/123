@@ -1,5 +1,6 @@
 /**
  * Studio 8 Pilates — Executive Analytics Visualizer
+ * Version: 1.1.0 - Refactorización de estabilidad y optimización de rendimiento
  * @license Apache-2.0
  */
 
@@ -46,6 +47,7 @@ export default function App() {
     disciplina: '',
     coach: '',
     recordatorio: 'all',
+    estatus: 'all',
     fechaInicio: '',
     fechaFin: ''
   });
@@ -83,7 +85,8 @@ export default function App() {
         setFileName(file.name);
         setIsDropzoneVisible(false);
         setTimeRange('all');
-        showToast(`¡Encendido Exitoso! Se procesaron ${parsedBookings.length} reservas de ${file.name}.`);
+        const cancCount = parsedBookings.filter(b => b.cancelada).length;
+        showToast(`¡Encendido Exitoso! Se procesaron ${parsedBookings.length} reservas (${cancCount} canceladas) de ${file.name}.`);
       }
     } catch (err) {
       console.error('Error parsing file:', err);
@@ -93,13 +96,14 @@ export default function App() {
     }
   };
 
-  // Load sample S8 data
+  // Load sample S8 data (contains real automated data from July to October 2026)
   const handleLoadSampleData = () => {
     setBookings(SAMPLE_BOOKINGS);
-    setFileName('S8_Pilates_Julio_2026.xlsx');
+    setFileName('AUTOMATIZACION_S8.xlsx');
     setIsDropzoneVisible(false);
     setTimeRange('all');
-    showToast(`Cargadas ${SAMPLE_BOOKINGS.length} reservas de muestra de Studio 8 Pilates.`);
+    const cancCount = SAMPLE_BOOKINGS.filter(b => b.cancelada).length;
+    showToast(`Cargadas ${SAMPLE_BOOKINGS.length} reservas reales (${cancCount} canceladas) de Studio 8 Pilates.`);
   };
 
   // Filter updates
@@ -113,6 +117,7 @@ export default function App() {
       disciplina: '',
       coach: '',
       recordatorio: 'all',
+      estatus: 'all',
       fechaInicio: '',
       fechaFin: ''
     });
@@ -126,7 +131,11 @@ export default function App() {
   // Available unique coaches & disciplinas
   const uniqueCoaches = useMemo(() => {
     const set = new Set<string>();
-    bookings.forEach(b => { if (b.coach) set.add(b.coach); });
+    bookings.forEach(b => { 
+      if (b.coach && b.coach !== 'Sin Asignar' && b.coach !== 'General') {
+        set.add(b.coach); 
+      }
+    });
     return Array.from(set).sort();
   }, [bookings]);
 
@@ -136,13 +145,20 @@ export default function App() {
     return Array.from(set).sort();
   }, [bookings]);
 
-  // 2. Secondary Filter Layer (search query, coach, discipline, reminder status)
+  // 2. Secondary Filter Layer (search query, coach, discipline, reminder status, cancellation status)
   const filteredBookings = useMemo(() => {
     return timeFilteredBookings.filter(b => {
+      // Estatus (Activas / Canceladas)
+      if (filters.estatus === 'activas' && b.cancelada) {
+        return false;
+      }
+      if (filters.estatus === 'canceladas' && !b.cancelada) {
+        return false;
+      }
       // Search
       if (filters.search) {
         const q = filters.search.toLowerCase();
-        const fullText = `${b.nombre} ${b.apellido} ${b.correo} ${b.telefono} ${b.clase} ${b.disciplina} ${b.coach}`.toLowerCase();
+        const fullText = `${b.nombre} ${b.apellido} ${b.correo} ${b.telefono} ${b.clase} ${b.disciplina} ${b.coach} ${b.reservationId || ''} ${b.estatus || ''}`.toLowerCase();
         if (!fullText.includes(q)) return false;
       }
       // Disciplina
@@ -274,9 +290,16 @@ export default function App() {
                   selectedCoach={filters.coach}
                   selectedDisciplina={filters.disciplina}
                   selectedRecordatorio={filters.recordatorio}
+                  selectedEstatus={filters.estatus}
+                  selectedMonth={selectedMonth}
                   onSelectCoach={(coach) => handleFilterChange({ coach })}
                   onSelectDisciplina={(disciplina) => handleFilterChange({ disciplina })}
                   onSelectRecordatorio={(recordatorio) => handleFilterChange({ recordatorio })}
+                  onSelectEstatus={(estatus) => handleFilterChange({ estatus })}
+                  onSelectMonth={(monthKey) => {
+                    setSelectedMonth(monthKey);
+                    setTimeRange('month');
+                  }}
                 />
 
                 {/* Filter Bar */}
@@ -309,7 +332,7 @@ export default function App() {
           </p>
           <p className="text-[11px] text-[#8C7A6B] flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[#2E7D32]" />
-            <span>Arquitectura Inmutable Read-Only • Fuente de Verdad Excel</span>
+            <span>v1.1.0 • Arquitectura Inmutable Read-Only • Fuente de Verdad AUTOMATIZACION S8</span>
           </p>
         </div>
       </footer>
@@ -323,4 +346,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -24,6 +24,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.disciplina !== '' ||
     filters.coach !== '' ||
     filters.recordatorio !== 'all' ||
+    filters.estatus !== 'all' ||
     filters.fechaInicio !== '' ||
     filters.fechaFin !== '';
 
@@ -38,7 +39,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="text"
             value={filters.search}
             onChange={(e) => onFilterChange({ search: e.target.value })}
-            placeholder="Buscar por cliente, correo, teléfono o clase..."
+            placeholder="Buscar por cliente, ID reserva, correo, teléfono o clase..."
             className="w-full pl-10 pr-9 py-2.5 bg-[#FDFBF7] border border-[#E8E4DD] rounded-xl text-xs sm:text-sm text-[#1A1A1A] placeholder-[#9A9080] focus:outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all"
           />
           {filters.search && (
@@ -55,6 +56,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* Filter Dropdowns */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           
+          {/* Estatus Selector (Activa / Cancelada) */}
+          <select
+            value={filters.estatus}
+            onChange={(e) => onFilterChange({ estatus: e.target.value as any })}
+            className={`px-3 py-2 border rounded-xl text-xs font-semibold focus:outline-none transition-all ${
+              filters.estatus === 'canceladas'
+                ? 'bg-[#FFEBEE] text-[#C62828] border-[#FFCDD2]'
+                : filters.estatus === 'activas'
+                ? 'bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9]'
+                : 'bg-[#FDFBF7] border-[#E8E4DD] text-[#4A453B]'
+            }`}
+          >
+            <option value="all">Estado: Todos</option>
+            <option value="activas">Estado: Solo Activas</option>
+            <option value="canceladas">Estado: Solo Canceladas</option>
+          </select>
+
           {/* Disciplina Selector */}
           <select
             value={filters.disciplina}

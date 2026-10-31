@@ -4,7 +4,6 @@ import {
   Check, 
   X, 
   ArrowUpDown, 
-  MessageSquare, 
   ChevronLeft, 
   ChevronRight, 
   Eye,
@@ -12,8 +11,9 @@ import {
   Clock,
   User,
   PhoneCall,
-  HeartHandshake,
-  BellRing
+  XCircle,
+  CheckCircle2,
+  Tag
 } from 'lucide-react';
 
 interface DataTableProps {
@@ -21,7 +21,7 @@ interface DataTableProps {
   onSelectBooking: (booking: PilatesBooking) => void;
 }
 
-type SortField = 'fecha' | 'hora' | 'nombre' | 'coach' | 'disciplina' | 'recordatorio';
+type SortField = 'fecha' | 'hora' | 'nombre' | 'coach' | 'disciplina' | 'recordatorio' | 'estatus' | 'reservationId';
 type SortOrder = 'asc' | 'desc';
 
 const WhatsAppIcon = ({ className = "w-3.5 h-3.5" }: { className?: string }) => (
@@ -35,11 +35,11 @@ export const DataTable: React.FC<DataTableProps> = ({
   onSelectBooking,
 }) => {
   const [sortField, setSortField] = useState<SortField>('fecha');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 12;
 
-  // FIX RENDERIZADO FANTASMA: Reset page to 1 whenever bookings change
+  // Reset page to 1 whenever bookings change
   useEffect(() => {
     setCurrentPage(1);
   }, [bookings.length]);
@@ -61,6 +61,9 @@ export const DataTable: React.FC<DataTableProps> = ({
     if (sortField === 'recordatorio') {
       aVal = a.recordatorio ? 1 : 0;
       bVal = b.recordatorio ? 1 : 0;
+    } else if (sortField === 'estatus') {
+      aVal = a.cancelada ? 1 : 0;
+      bVal = b.cancelada ? 1 : 0;
     }
 
     if (typeof aVal === 'string') {
@@ -90,9 +93,11 @@ export const DataTable: React.FC<DataTableProps> = ({
     }
 
     let textMessage = '';
-    if (booking.recordatorio) {
-      // Mensaje de agradecimiento sin información de clase
-      textMessage = `Hola ${booking.nombre}, ¡muchas gracias por elegirnos en Studio 8 Pilates! Es un gusto tenerte con nosotros, ¡te esperamos siempre! ✨`;
+    if (booking.cancelada) {
+      textMessage = `Hola ${booking.nombre}, confirmamos la cancelación de tu reserva (${booking.disciplina}${booking.reservationId ? ' #' + booking.reservationId : ''}) en Studio 8 Pilates. Esperamos tenerte pronto de regreso con nosotros. ¡Que tengas un excelente día! ✨`;
+    } else if (booking.recordatorio) {
+      // Mensaje de confirmación o agradecimiento
+      textMessage = `Hola ${booking.nombre}, ¡muchas gracias por reservar en Studio 8 Pilates! Tu clase de ${booking.disciplina} está confirmada para el ${booking.fecha} a las ${booking.hora} hs. ¡Te esperamos! ✨`;
     } else {
       // Mensaje corto y puntual de recordatorio
       textMessage = `Hola ${booking.nombre}, te recordamos tu clase de ${booking.disciplina} en Studio 8 Pilates el ${booking.fecha} a las ${booking.hora} hs. ¡Te esperamos!`;
@@ -109,24 +114,24 @@ export const DataTable: React.FC<DataTableProps> = ({
       <div className="px-6 py-4 border-b border-[#E8E4DD] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FDFBF7]">
         <div>
           <h2 className="font-serif-luxury text-xl font-bold text-[#1A1A1A] tracking-tight flex items-center gap-2">
-            <span>Tabla Semántica de Reservas</span>
+            <span>Tabla de Reservas & Estado de Cancelaciones</span>
             <span className="text-[10px] uppercase font-sans-ui font-semibold bg-[#EAE5D9] text-[#4A453B] px-2 py-0.5 rounded-md">
-              Fuente: Excel Inmutable
+              AUTOMATIZACION S8
             </span>
           </h2>
           <p className="text-xs text-[#7A6E5D] mt-0.5">
-            Vista analítica de citas, coaches, disciplinas y motor de mensajería segmentada
+            Vista integral de citas, IDs de reserva, estado de asistencia y motor WhatsApp
           </p>
         </div>
 
         <div className="text-xs text-[#6B655B] font-medium font-mono-numbers bg-[#F5F1E8] px-3 py-1.5 rounded-xl border border-[#E8E4DD]">
-          Página <strong className="text-[#1A1A1A]">{safeCurrentPage}</strong> de <strong className="text-[#1A1A1A]">{totalPages}</strong> ({bookings.length} reservas filtradas)
+          Página <strong className="text-[#1A1A1A]">{safeCurrentPage}</strong> de <strong className="text-[#1A1A1A]">{totalPages}</strong> ({bookings.length} reservas)
         </div>
       </div>
 
       {/* Semantic Scrollable Table */}
       <div className="overflow-x-auto min-h-[300px] max-h-[650px] overflow-y-auto">
-        <table className="w-full text-left border-collapse min-w-[950px]">
+        <table className="w-full text-left border-collapse min-w-[1050px]">
           <thead className="sticky top-0 bg-[#F5F1E8] z-10 border-b border-[#E8E4DD] text-[11px] font-bold text-[#4A453B] uppercase tracking-wider">
             <tr>
               <th scope="col" className="py-3.5 px-4 text-center w-12">
@@ -134,11 +139,31 @@ export const DataTable: React.FC<DataTableProps> = ({
               </th>
               <th 
                 scope="col" 
+                onClick={() => handleSort('estatus')}
+                className="py-3.5 px-4 cursor-pointer hover:text-[#1A1A1A] transition-colors"
+              >
+                <div className="flex items-center gap-1">
+                  <span>ESTADO</span>
+                  <ArrowUpDown className="w-3 h-3 text-[#8C7A6B]" />
+                </div>
+              </th>
+              <th 
+                scope="col" 
+                onClick={() => handleSort('reservationId')}
+                className="py-3.5 px-4 cursor-pointer hover:text-[#1A1A1A] transition-colors"
+              >
+                <div className="flex items-center gap-1">
+                  <span>ID Reserva</span>
+                  <ArrowUpDown className="w-3 h-3 text-[#8C7A6B]" />
+                </div>
+              </th>
+              <th 
+                scope="col" 
                 onClick={() => handleSort('recordatorio')}
                 className="py-3.5 px-4 cursor-pointer hover:text-[#1A1A1A] transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <span>RECORDATORIO</span>
+                  <span>Recordatorio</span>
                   <ArrowUpDown className="w-3 h-3 text-[#8C7A6B]" />
                 </div>
               </th>
@@ -186,7 +211,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 Contacto
               </th>
               <th scope="col" className="py-3.5 px-4 text-right">
-                Mensajería WhatsApp
+                Acción WhatsApp
               </th>
             </tr>
           </thead>
@@ -194,9 +219,9 @@ export const DataTable: React.FC<DataTableProps> = ({
           <tbody className="divide-y divide-[#F0ECE1] text-xs text-[#1A1A1A]">
             {paginatedBookings.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center text-[#7A6E5D] bg-[#FDFBF7]/50">
-                  <p className="text-base font-serif-luxury font-bold text-[#1A1A1A]">No se encontraron reservas con estos filtros</p>
-                  <p className="text-xs text-[#8C7A6B] mt-1">Ajusta los criterios de búsqueda en la barra superior o limpia los filtros de disciplina/coach</p>
+                <td colSpan={10} className="py-16 text-center text-[#7A6E5D] bg-[#FDFBF7]/50">
+                  <p className="text-base font-serif-luxury font-bold text-[#1A1A1A]">No se encontraron reservas con estos criterios</p>
+                  <p className="text-xs text-[#8C7A6B] mt-1">Ajusta los filtros de estado (activas/canceladas), fecha o búsqueda</p>
                 </td>
               </tr>
             ) : (
@@ -206,24 +231,55 @@ export const DataTable: React.FC<DataTableProps> = ({
                   <tr 
                     key={booking.id}
                     onClick={() => onSelectBooking(booking)}
-                    className="hover:bg-[#FDFBF7] transition-colors group cursor-pointer"
+                    className={`transition-colors group cursor-pointer ${
+                      booking.cancelada 
+                        ? 'bg-[#FFF8F8] hover:bg-[#FFEBEE]/60' 
+                        : 'hover:bg-[#FDFBF7]'
+                    }`}
                   >
                     {/* Index */}
-                    <td className="py-3.5 px-4 text-center text-[#8C7A6B] font-mono-numbers text-[11px] font-semibold">
+                    <td className="py-3 px-4 text-center text-[#8C7A6B] font-mono-numbers text-[11px] font-semibold">
                       {globalIndex}
                     </td>
 
-                    {/* Recordatorio Status Badge (Read-Only) */}
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+                    {/* Estado (Activa vs Cancelada) */}
+                    <td className="py-3 px-4">
+                      {booking.cancelada ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2]">
+                          <XCircle className="w-3 h-3 text-[#C62828]" />
+                          <span>Cancelada</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]">
+                          <Check className="w-3 h-3 text-[#2E7D32]" />
+                          <span>Activa</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Reservation ID */}
+                    <td className="py-3 px-4 font-mono-numbers">
+                      {booking.reservationId ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#F5F1E8] text-[#1A1A1A] font-semibold text-[11px] border border-[#E8E4DD]">
+                          <Tag className="w-3 h-3 text-[#8C7A6B]" />
+                          #{booking.reservationId}
+                        </span>
+                      ) : (
+                        <span className="text-[#A8A092] text-[11px] italic">—</span>
+                      )}
+                    </td>
+
+                    {/* Recordatorio Status Badge */}
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                         booking.recordatorio
-                          ? 'bg-[#2E7D32]/10 text-[#2E7D32] border-[#2E7D32]/30'
+                          ? 'bg-[#2E7D32]/10 text-[#2E7D32] border-[#2E7D32]/25'
                           : 'bg-[#FFF8E1] text-[#B78103] border-[#FFE082]'
                       }`}>
                         {booking.recordatorio ? (
                           <>
-                            <Check className="w-3 h-3 text-[#2E7D32]" />
-                            <span>Enviado / Confirmado</span>
+                            <CheckCircle2 className="w-3 h-3 text-[#2E7D32]" />
+                            <span>Enviado</span>
                           </>
                         ) : (
                           <>
@@ -235,9 +291,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                     </td>
 
                     {/* Cliente Name & Email */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <div>
-                        <p className="font-semibold text-[#1A1A1A] group-hover:text-[#8C7A6B] transition-colors">
+                        <p className={`font-semibold transition-colors ${
+                          booking.cancelada 
+                            ? 'text-[#C62828] line-through decoration-[#E57373]' 
+                            : 'text-[#1A1A1A] group-hover:text-[#8C7A6B]'
+                        }`}>
                           {booking.nombre} {booking.apellido}
                         </p>
                         <p className="text-[11px] text-[#7A6E5D] truncate max-w-[180px]">
@@ -247,9 +307,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                     </td>
 
                     {/* Disciplina & Clase */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <div>
-                        <span className="inline-block font-semibold px-2.5 py-0.5 rounded-md bg-[#F5F1E8] text-[#4A453B] text-[11px] border border-[#E8E4DD]">
+                        <span className="inline-block font-semibold px-2 py-0.5 rounded-md bg-[#F5F1E8] text-[#4A453B] text-[11px] border border-[#E8E4DD]">
                           {booking.disciplina}
                         </span>
                         {booking.clase && (
@@ -261,7 +321,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     </td>
 
                     {/* Fecha & Hora */}
-                    <td className="py-3.5 px-4 font-mono-numbers">
+                    <td className="py-3 px-4 font-mono-numbers">
                       <div className="flex flex-col">
                         <span className="font-semibold text-[#1A1A1A] flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-[#8C7A6B]" />
@@ -275,7 +335,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     </td>
 
                     {/* Coach */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
                         <div className="w-6 h-6 rounded-full bg-[#EAE5D9] text-[#1A1A1A] font-bold text-[10px] flex items-center justify-center uppercase shrink-0">
                           {booking.coach ? booking.coach.charAt(0) : 'A'}
@@ -287,7 +347,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     </td>
 
                     {/* Contacto Phone */}
-                    <td className="py-3.5 px-4 font-mono-numbers">
+                    <td className="py-3 px-4 font-mono-numbers">
                       {booking.telefono ? (
                         <span className="text-[#4A453B] bg-[#FDFBF7] px-2 py-1 rounded border border-[#E8E4DD] text-[11px] inline-flex items-center gap-1">
                           <PhoneCall className="w-3 h-3 text-[#8C7A6B]" />
@@ -298,17 +358,21 @@ export const DataTable: React.FC<DataTableProps> = ({
                       )}
                     </td>
 
-                    {/* Motor Segmentado WhatsApp Actions */}
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
+                    {/* Motor WhatsApp Actions */}
+                    <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={(e) => openWhatsApp(booking, e)}
                           type="button"
-                          className="px-3 py-1.5 rounded-xl font-semibold text-xs bg-[#25D366] hover:bg-[#128C7E] text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
-                          title="Enviar mensaje por WhatsApp"
+                          className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98] ${
+                            booking.cancelada
+                              ? 'bg-[#B71C1C] hover:bg-[#880E4F] text-white'
+                              : 'bg-[#25D366] hover:bg-[#128C7E] text-white'
+                          }`}
+                          title={booking.cancelada ? "Contactar por cancelación" : "Enviar mensaje por WhatsApp"}
                         >
                           <WhatsAppIcon className="w-3.5 h-3.5" />
-                          <span>WhatsApp</span>
+                          <span>{booking.cancelada ? "Baja" : "WhatsApp"}</span>
                         </button>
 
                         <button
@@ -374,4 +438,3 @@ export const DataTable: React.FC<DataTableProps> = ({
     </div>
   );
 };
-

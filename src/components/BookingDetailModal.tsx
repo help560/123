@@ -10,9 +10,10 @@ import {
   Award, 
   Activity, 
   Check, 
-  BellRing,
-  HeartHandshake,
-  ShieldCheck
+  ShieldCheck,
+  XCircle,
+  Tag,
+  AlertTriangle
 } from 'lucide-react';
 
 interface BookingDetailModalProps {
@@ -40,11 +41,11 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     }
 
     let textMessage = '';
-    if (booking.recordatorio) {
-      // Mensaje de agradecimiento sin información de clase
-      textMessage = `Hola ${booking.nombre}, ¡muchas gracias por elegirnos en Studio 8 Pilates! Es un gusto tenerte con nosotros, ¡te esperamos siempre! ✨`;
+    if (booking.cancelada) {
+      textMessage = `Hola ${booking.nombre}, te contactamos desde Studio 8 Pilates para confirmar la cancelación de tu reserva (${booking.disciplina}${booking.reservationId ? ' #' + booking.reservationId : ''}). Si deseas reprogramar o necesitas asistencia, estamos para ayudarte. ¡Te esperamos pronto! ✨`;
+    } else if (booking.recordatorio) {
+      textMessage = `Hola ${booking.nombre}, ¡muchas gracias por reservar en Studio 8 Pilates! Tu clase de ${booking.disciplina} está confirmada para el ${booking.fecha} a las ${booking.hora} hs. ¡Te esperamos! ✨`;
     } else {
-      // Mensaje corto y puntual de recordatorio
       textMessage = `Hola ${booking.nombre}, te recordamos tu clase de ${booking.disciplina} en Studio 8 Pilates el ${booking.fecha} a las ${booking.hora} hs. ¡Te esperamos!`;
     }
 
@@ -61,19 +62,24 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
         {/* Modal Header */}
         <div className="bg-[#1A1A1A] text-[#FDFBF7] p-6 flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C8BFA8] px-2.5 py-0.5 rounded bg-[#38332B] inline-block">
                 Ficha Analítica Studio 8
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#81C784] px-2 py-0.5 rounded bg-[#38332B] inline-flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" /> Read-Only
               </span>
+              {booking.reservationId && (
+                <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[#4A453B] font-mono-numbers inline-flex items-center gap-1">
+                  <Tag className="w-2.5 h-2.5 text-[#C8BFA8]" /> #{booking.reservationId}
+                </span>
+              )}
             </div>
-            <h3 className="font-serif-luxury text-2xl font-bold">
+            <h3 className={`font-serif-luxury text-2xl font-bold ${booking.cancelada ? 'text-[#EF9A9A] line-through' : ''}`}>
               {booking.nombre} {booking.apellido}
             </h3>
             <p className="text-xs text-[#A8A092] mt-0.5 font-mono-numbers">
-              ID Registro: {booking.id}
+              ID Interno: {booking.id}
             </p>
           </div>
           <button
@@ -88,22 +94,54 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 space-y-4 text-xs text-[#1A1A1A]">
           
-          {/* Status Banner */}
-          <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
-            booking.recordatorio
-              ? 'bg-[#2E7D32]/10 border-[#2E7D32]/30 text-[#2E7D32]'
-              : 'bg-[#FFF8E1] border-[#FFE082] text-[#B78103]'
-          }`}>
-            <div className="flex items-center gap-2 font-semibold text-sm">
-              {booking.recordatorio ? (
+          {/* Status Banners */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Estado de la Reserva */}
+            <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+              booking.cancelada
+                ? 'bg-[#FFEBEE] border-[#FFCDD2] text-[#C62828]'
+                : 'bg-[#E8F5E9] border-[#C8E6C9] text-[#2E7D32]'
+            }`}>
+              {booking.cancelada ? (
                 <>
-                  <Check className="w-4 h-4" />
-                  <span>Recordatorio: Enviado / Confirmado</span>
+                  <XCircle className="w-4 h-4 shrink-0 text-[#C62828]" />
+                  <div>
+                    <span className="font-bold block">Reserva Cancelada</span>
+                    <span className="text-[10px] text-[#C62828]/80">Cupo liberado</span>
+                  </div>
                 </>
               ) : (
                 <>
-                  <Clock className="w-4 h-4" />
-                  <span>Recordatorio: Pendiente</span>
+                  <Check className="w-4 h-4 shrink-0 text-[#2E7D32]" />
+                  <div>
+                    <span className="font-bold block">Reserva Activa</span>
+                    <span className="text-[10px] text-[#2E7D32]/80">Asistencia registrada</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Recordatorio Status */}
+            <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+              booking.recordatorio
+                ? 'bg-[#2E7D32]/10 border-[#2E7D32]/30 text-[#2E7D32]'
+                : 'bg-[#FFF8E1] border-[#FFE082] text-[#B78103]'
+            }`}>
+              {booking.recordatorio ? (
+                <>
+                  <Check className="w-4 h-4 shrink-0" />
+                  <div>
+                    <span className="font-bold block">Recordatorio Enviado</span>
+                    <span className="text-[10px] text-[#2E7D32]/80">Confirmado</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <div>
+                    <span className="font-bold block">Recordatorio Pendiente</span>
+                    <span className="text-[10px] text-[#B78103]/80">Sin confirmación</span>
+                  </div>
                 </>
               )}
             </div>
@@ -191,18 +229,22 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
         {/* Modal Footer Actions */}
         <div className="bg-[#F5F1E8] p-4 border-t border-[#E8E4DD] flex items-center justify-between gap-3">
           <p className="text-[11px] text-[#7A6E5D] font-medium">
-            * Mensajería personalizada según estatus del Excel
+            {booking.cancelada ? 'Notificación de baja adaptada' : 'Mensaje automático personalizado'}
           </p>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleWhatsApp}
               type="button"
-              className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
+              className={`px-4 py-2 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.98] ${
+                booking.cancelada 
+                  ? 'bg-[#B71C1C] hover:bg-[#880E4F]' 
+                  : 'bg-[#25D366] hover:bg-[#128C7E]'
+              }`}
               title="Enviar mensaje por WhatsApp"
             >
               <WhatsAppIcon className="w-4 h-4" />
-              <span>Enviar por WhatsApp</span>
+              <span>{booking.cancelada ? 'Contactar por Cancelación' : 'Enviar por WhatsApp'}</span>
             </button>
 
             <button
@@ -219,4 +261,3 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     </div>
   );
 };
-

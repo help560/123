@@ -125,21 +125,38 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           </div>
 
           {/* Supported Format Tags */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            {['SUBMITED', 'NOMBRE', 'APELLIDO', 'CORREO', 'DISCIPLINA', 'FECHA', 'HORA', 'COACH', 'CLASE', 'REDORDATORIO', 'TELEFONO'].slice(0, 6).map((col) => (
-              <span key={col} className="text-[11px] font-mono-numbers px-2.5 py-1 rounded-md bg-[#F5F1E8] text-[#5A5245] border border-[#E8E4DD]">
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 max-w-xl">
+            {['SUBMITED', 'NOMBRE', 'APELLIDO', 'CORREO', 'DISCIPLINA', 'FECHA', 'HORA', 'COACH', 'CLASE', 'REDORDATORIO', 'RESERVATION ID', 'ESTATUS'].map((col) => (
+              <span 
+                key={col} 
+                className={`text-[11px] font-mono-numbers px-2.5 py-1 rounded-md border ${
+                  col === 'ESTATUS' || col === 'RESERVATION ID'
+                    ? 'bg-[#1A1A1A] text-[#FDFBF7] border-[#1A1A1A] font-bold'
+                    : 'bg-[#F5F1E8] text-[#5A5245] border-[#E8E4DD]'
+                }`}
+              >
                 {col}
               </span>
             ))}
-            <span className="text-[11px] font-medium text-[#8C7A6B]">+5 columnas</span>
           </div>
 
           {/* Call to action button inside dropzone */}
-          <div className="pt-2">
+          <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
             <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1A1A1A] text-[#FDFBF7] text-xs sm:text-sm font-semibold shadow-sm group-hover:bg-[#333333] transition-all">
               <span>Seleccionar desde el dispositivo</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLoadSampleData();
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] text-[#4A453B] hover:bg-[#EAE5D9] text-xs sm:text-sm font-semibold border border-[#E8E4DD] transition-all shadow-xs cursor-pointer"
+            >
+              <span>Cargar datos reales (1,644 reservas con canceladas)</span>
+            </button>
           </div>
         </div>
       </div>
