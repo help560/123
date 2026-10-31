@@ -54,6 +54,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-serif-luxury text-xl md:text-2xl font-bold tracking-tight text-[#1A1A1A]">
                   STUDIO 8
                 </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#1A1A1A] text-[#FDFBF7] shadow-2xs">
+                  v1.1.0
+                </span>
               </div>
             </div>
           </div>

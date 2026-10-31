@@ -3,6 +3,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Force cache invalidation on version upgrades
+ARG BUILD_VERSION=1.1.0
+ENV APP_VERSION=1.1.0
+ENV VITE_APP_VERSION=1.1.0
+
 # Copy package management files
 COPY package*.json ./
 

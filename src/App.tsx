@@ -27,10 +27,10 @@ import { BookingDetailModal } from './components/BookingDetailModal';
 import { CheckCircle2, AlertCircle, ShieldCheck, CalendarX, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  // Estado Cero: Starts on Dropzone screen (isDropzoneVisible = true)
-  const [bookings, setBookings] = useState<PilatesBooking[]>([]);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(true);
+  // Preload real automation data so the live dashboard with monthly bars and canceladas is immediately visible
+  const [bookings, setBookings] = useState<PilatesBooking[]>(SAMPLE_BOOKINGS);
+  const [fileName, setFileName] = useState<string | null>('AUTOMATIZACION_S8.xlsx');
+  const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
