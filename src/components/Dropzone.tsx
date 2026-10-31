@@ -146,6 +146,17 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               <span>Seleccionar desde el dispositivo</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLoadSampleData();
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] text-[#4A453B] hover:bg-[#EAE5D9] text-xs sm:text-sm font-semibold border border-[#E8E4DD] transition-all shadow-xs cursor-pointer"
+            >
+              <span>Cargar datos reales (1,644 reservas con canceladas)</span>
+            </button>
           </div>
         </div>
       </div>
