@@ -5,16 +5,18 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { User } from 'firebase/auth';
 import { PilatesBooking, FilterState, TimeRangeOption } from './types';
 import { SAMPLE_BOOKINGS } from './data/sampleData';
 import { 
   parseUploadedFile, 
   calculateMetrics, 
-  exportToCSV,
-  getFilteredData,
-  getAvailableMonths,
-  getDateRangeLabel
+  exportToCSV, 
+  getFilteredData, 
+  getAvailableMonths, 
+  getDateRangeLabel 
 } from './utils/parser';
+import { initAuth } from './services/googleAuth';
 
 import { Header } from './components/Header';
 import { Dropzone } from './components/Dropzone';
@@ -23,6 +25,7 @@ import { BentoGrid } from './components/BentoGrid';
 import { FilterBar } from './components/FilterBar';
 import { DataTable } from './components/DataTable';
 import { BookingDetailModal } from './components/BookingDetailModal';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 
 import { CheckCircle2, AlertCircle, ShieldCheck, CalendarX, RotateCcw } from 'lucide-react';
 
@@ -33,6 +36,22 @@ export default function App() {
   const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Google Sheets integration state
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState<boolean>(false);
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+
+  // Listen to Google Auth changes
+  useEffect(() => {
+    const unsubscribe = initAuth((user) => {
+      setGoogleUser(user);
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   // Time Range Selection State
   const [timeRange, setTimeRange] = useState<TimeRangeOption>('all');
@@ -104,6 +123,16 @@ export default function App() {
     setTimeRange('all');
     const cancCount = SAMPLE_BOOKINGS.filter(b => b.cancelada).length;
     showToast(`Cargadas ${SAMPLE_BOOKINGS.length} reservas reales (${cancCount} canceladas) de Studio 8 Pilates.`);
+  };
+
+  // Handle data loaded directly from Google Sheets
+  const handleSheetDataLoaded = (sheetBookings: PilatesBooking[], sheetName: string) => {
+    setBookings(sheetBookings);
+    setFileName(sheetName);
+    setIsDropzoneVisible(false);
+    setTimeRange('all');
+    const cancCount = sheetBookings.filter(b => b.cancelada).length;
+    showToast(`¡Conectado a Google Sheets! ${sheetBookings.length} reservas sincronizadas (${cancCount} canceladas).`);
   };
 
   // Filter updates
@@ -221,6 +250,8 @@ export default function App() {
           setTimeRange('all');
           setSelectedMonth('');
         }}
+        onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+        isGoogleConnected={Boolean(googleUser)}
       />
 
       {/* Main Content View Container */}
@@ -231,6 +262,7 @@ export default function App() {
           <Dropzone
             onFileUpload={handleFileUpload}
             onLoadSampleData={handleLoadSampleData}
+            onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
             isLoading={isLoading}
           />
         ) : (
@@ -341,6 +373,14 @@ export default function App() {
       <BookingDetailModal
         booking={selectedBooking}
         onClose={() => setSelectedBooking(null)}
+      />
+
+      <GoogleSheetsModal
+        isOpen={isSheetsModalOpen}
+        onClose={() => setIsSheetsModalOpen(false)}
+        onSheetDataLoaded={handleSheetDataLoaded}
+        currentUser={googleUser}
+        onUserChanged={(user) => setGoogleUser(user)}
       />
 
     </div>

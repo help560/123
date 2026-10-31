@@ -1,15 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Upload, ArrowRight } from 'lucide-react';
+import { Upload, ArrowRight, FileSpreadsheet } from 'lucide-react';
 
 interface DropzoneProps {
   onFileUpload: (file: File) => void;
   onLoadSampleData: () => void;
+  onOpenGoogleSheets?: () => void;
   isLoading?: boolean;
 }
 
 export const Dropzone: React.FC<DropzoneProps> = ({
   onFileUpload,
   onLoadSampleData,
+  onOpenGoogleSheets,
   isLoading = false,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -147,6 +149,22 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
 
+            {onOpenGoogleSheets && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenGoogleSheets();
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-[#1A1A1A] hover:bg-[#F5F1E8] text-xs sm:text-sm font-semibold border border-[#0F9D58]/40 hover:border-[#0F9D58] transition-all shadow-xs cursor-pointer"
+              >
+                <div className="w-4 h-4 rounded bg-[#0F9D58] flex items-center justify-center shrink-0">
+                  <FileSpreadsheet className="w-2.5 h-2.5 text-white" />
+                </div>
+                <span>Conectar con Google Sheets en la nube</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={(e) => {
@@ -155,7 +173,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               }}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5F1E8] text-[#4A453B] hover:bg-[#EAE5D9] text-xs sm:text-sm font-semibold border border-[#E8E4DD] transition-all shadow-xs cursor-pointer"
             >
-              <span>Cargar datos reales (1,644 reservas con canceladas)</span>
+              <span>Cargar datos locales (1,644 reservas)</span>
             </button>
           </div>
         </div>
