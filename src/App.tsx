@@ -6,7 +6,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { PilatesBooking, FilterState, TimeRangeOption } from './types';
-import { SAMPLE_BOOKINGS } from './data/sampleData';
 import { 
   parseUploadedFile, 
   calculateMetrics, 
@@ -27,10 +26,10 @@ import { BookingDetailModal } from './components/BookingDetailModal';
 import { CheckCircle2, AlertCircle, ShieldCheck, CalendarX, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  // Preload real automation data so the live dashboard with monthly bars and canceladas is immediately visible
-  const [bookings, setBookings] = useState<PilatesBooking[]>(SAMPLE_BOOKINGS);
-  const [fileName, setFileName] = useState<string | null>('AUTOMATIZACION_S8.xlsx');
-  const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(false);
+  // Estado Cero: Starts on Dropzone screen (isDropzoneVisible = true)
+  const [bookings, setBookings] = useState<PilatesBooking[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isDropzoneVisible, setIsDropzoneVisible] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -94,16 +93,6 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Load sample S8 data (contains real automated data from July to October 2026)
-  const handleLoadSampleData = () => {
-    setBookings(SAMPLE_BOOKINGS);
-    setFileName('AUTOMATIZACION_S8.xlsx');
-    setIsDropzoneVisible(false);
-    setTimeRange('all');
-    const cancCount = SAMPLE_BOOKINGS.filter(b => b.cancelada).length;
-    showToast(`Cargadas ${SAMPLE_BOOKINGS.length} reservas reales (${cancCount} canceladas) de Studio 8 Pilates.`);
   };
 
   // Filter updates
@@ -212,7 +201,6 @@ export default function App() {
         fileName={fileName}
         totalCount={bookings.length}
         onFileUpload={handleFileUpload}
-        onLoadSampleData={handleLoadSampleData}
         onExport={() => exportToCSV(filteredBookings)}
         onResetData={() => {
           setBookings([]);
@@ -230,7 +218,6 @@ export default function App() {
         {isDropzoneVisible || bookings.length === 0 ? (
           <Dropzone
             onFileUpload={handleFileUpload}
-            onLoadSampleData={handleLoadSampleData}
             isLoading={isLoading}
           />
         ) : (
